@@ -62,4 +62,4 @@ Skippy is a simple keylogger application for Windows, implemented in Go. It capt
 - **Permissions**: Ensure that you have appropriate permissions to run and access files on your system.
 - **Ethical Use**: Use Skippy responsibly and only on machines where you have explicit permission to monitor keystrokes. Unauthorized use of keyloggers is illegal and unethical.
 
-For any issues or further questions, please refer to the documentation or seek assistance from the developer community.
+
