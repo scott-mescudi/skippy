@@ -193,7 +193,7 @@ func transform(s string, shift bool) string {
 		return string(c + ('a' - 'A'))
 	}
 
-	if c >= '0' && c <= '9' {
+	if c >= '1' && c <= '9' {
 		if shift {
 			return string(" !@#$%^&*()_"[c-'0'])
 		}
