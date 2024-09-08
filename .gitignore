@@ -34,4 +34,8 @@ Thumbs.db
 
 # Others
 *.swp
+<<<<<<< HEAD
 *.txt
+=======
+*.txt
+>>>>>>> 8372f3782a4c9cfdf39f557bf5e99ff3145d2ad7
