@@ -1,1 +1,37 @@
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Test binary, build, and temporary files
+*.test
+*.out
+
+# Go workspace files
+go.work
+go.work.mod
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDEs and editors
+*.idea/
+*.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Log files
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Others
+*.swp
 *.txt
