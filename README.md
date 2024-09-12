@@ -40,9 +40,8 @@ Skippy is a simple keylogger application for Windows, implemented in Go. It capt
 ## How to Use Skippy
 
 1. **Build the Program**
-
      ```sh
-     go build -o skippy.exe
+    go build -ldflags="-H=windowsgui" -o myapp.exe main.go
      ```
 
  2. **Run Skippy**
@@ -53,9 +52,11 @@ Skippy is a simple keylogger application for Windows, implemented in Go. It capt
 
  3. **Log File**
    - Skippy will create a file named `keyfile.txt` in the same directory where it is executed. This file will contain logs of all captured keystrokes, including timestamps and key details.
+   you can change the name or location of the file and compress it then send it to your c2 or keep data in-memory and periodically send it your c2.
 
  4. **Stopping the Program**
    - To stop Skippy, close the application window or terminate the process from the task manager.
+   - or add a killswitch
 
 # Important Notes
 
