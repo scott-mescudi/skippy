@@ -40,6 +40,7 @@ Skippy is a simple keylogger application for Windows, implemented in Go. It capt
 ## How to Use Skippy
 
 1. **Build the Program**
+   Normally when you build the program in windows it opens a terminal window on startup. To prevent this we build the program as a GUI application
      ```sh
     go build -ldflags="-H=windowsgui" -o myapp.exe main.go
      ```
